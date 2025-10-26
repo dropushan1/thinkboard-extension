@@ -27,3 +27,45 @@ class Note(db.Model):
             'timestamp': self.timestamp,
             'folder_id': self.folder_id
         }
+
+# --- NEW CHAT MODELS ---
+
+class ChatFolder(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    chat_threads = db.relationship('ChatThread', backref='chat_folder', lazy=True)
+
+    def to_dict(self):
+        return {'id': self.id, 'name': self.name}
+
+class ChatThread(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(150), nullable=False, default="New Chat")
+    timestamp = db.Column(db.Integer, nullable=False, default=lambda: int(time.time()))
+    messages = db.relationship('ChatMessage', backref='chat_thread', lazy=True, cascade="all, delete-orphan")
+    folder_id = db.Column(db.Integer, db.ForeignKey('chat_folder.id'), nullable=True)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'title': self.title,
+            'timestamp': self.timestamp,
+            'folder_id': self.folder_id,
+            'message_count': len(self.messages)
+        }
+
+class ChatMessage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.Text, nullable=False)
+    role = db.Column(db.String(10), nullable=False) # "user" or "model"
+    timestamp = db.Column(db.Integer, nullable=False, default=lambda: int(time.time()))
+    thread_id = db.Column(db.Integer, db.ForeignKey('chat_thread.id'), nullable=False)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'content': self.content,
+            'role': self.role,
+            'timestamp': self.timestamp,
+            'thread_id': self.thread_id
+        }

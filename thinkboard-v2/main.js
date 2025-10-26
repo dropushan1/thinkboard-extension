@@ -1,8 +1,12 @@
 document.addEventListener('DOMContentLoaded', () => {
     const content = document.getElementById('content');
+    const navLinks = document.querySelectorAll('.nav-link');
     const API_BASE_URL = 'http://127.0.0.1:5000/api';
+    
+    // State constant for an unsaved chat session
+    const NEW_THREAD_ID = 0; 
 
-    // --- UNIVERSAL HELPER FUNCTIONS [No Changes] ---
+    // --- UNIVERSAL HELPER FUNCTIONS ---
     const formatTimestamp = (unixTimestamp) => new Date(unixTimestamp * 1000).toLocaleString(undefined, {
         month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
     });
@@ -55,8 +59,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target.matches('.delete-btn')) {
             if (confirm('Are you sure you want to delete this note?')) {
                 await fetch(`${API_BASE_URL}/notes/${noteId}`, { method: 'DELETE' });
-                // Refresh the current view to reflect the change
-                handleViewChange(); 
+                // Re-trigger view change to refresh the list
+                const currentHash = window.location.hash.substring(1) || 'home';
+                if (currentHash.startsWith('home') || currentHash.startsWith('all-notes') || currentHash.startsWith('folder')) {
+                    handleHomeViewChange();
+                }
             }
         } else if (e.target.matches('.edit-btn')) {
             const textEl = noteItem.querySelector('.note-text');
@@ -73,64 +80,86 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     };
-    content.addEventListener('click', handleNoteAction);
+    
+    // Universal listener for note actions
+    content.addEventListener('click', (e) => {
+        if (e.target.closest('.note-item')) {
+            handleNoteAction(e);
+        }
+    });
+
+    // --- ROUTING & VIEW HANDLING LOGIC ---
+    let isInitialized = false; // Only used for initial setup of the homepage input box
+
+    const router = async () => {
+        const hash = window.location.hash.substring(1) || 'home';
+        const pageName = hash.split('/')[0]; 
+        const validPages = ['home', 'chat', 'words', 'grammar', 'settings'];
+
+        const pageToLoad = validPages.includes(pageName) ? pageName : 'home';
+
+        // Highlight active nav link
+        navLinks.forEach(link => {
+            link.classList.toggle('bg-gray-200', link.hash === `#${pageToLoad}`);
+            link.classList.toggle('dark:bg-gray-700', link.hash === `#${pageToLoad}`);
+        });
+        
+        try {
+            const response = await fetch(`pages/${pageToLoad}.html`);
+            if (!response.ok) throw new Error(`Page ${pageToLoad}.html not found.`);
+            content.innerHTML = await response.text();
+
+            // Call the specific initializer for the loaded page
+            if (pageToLoad === 'home') {
+                // Initialize the internal hash routing for the notes feature
+                window.removeEventListener('hashchange', router); // Temporarily remove main router
+                handleHomeViewChange(); 
+                window.addEventListener('hashchange', handleHomeViewChange);
+                window.addEventListener('hashchange', router); // Re-add main router (needed if hash changes to a different top-level page)
+            } else if (pageToLoad === 'chat') {
+                initChatPage();
+            }
+            // For other pages, content is static HTML.
+
+        } catch (error) {
+            console.error("Routing error:", error);
+            content.innerHTML = `<p class="text-center text-red-500">${error.message}</p>`;
+        }
+    };
+    
+    // Initial load and listen for hash changes
+    router();
+    window.addEventListener('hashchange', router);
 
 
-    // --- NEW ROUTING & VIEW HANDLING LOGIC ---
-    let isInitialized = false;
-
-    const handleViewChange = () => {
+    // --- NOTES/HOME PAGE LOGIC ---
+    
+    const handleHomeViewChange = () => {
         const hash = window.location.hash.substring(1) || 'home';
         const [page, param] = hash.split('/');
 
-        // Get all view containers
         const homeView = document.getElementById('home-view');
+        if (!homeView) return; 
+
         const allNotesView = document.getElementById('all-notes-view');
         const folderView = document.getElementById('folder-view');
         
-        // Hide all views first
         homeView.classList.add('hidden');
         allNotesView.classList.add('hidden');
         folderView.classList.add('hidden');
 
-        // Show the correct view and populate it with data
         if (page === 'all-notes') {
             allNotesView.classList.remove('hidden');
             initAllNotesPage();
         } else if (page === 'folder' && param) {
             folderView.classList.remove('hidden');
             initFolderViewPage(param);
-        } else { // Default to home
+        } else {
             homeView.classList.remove('hidden');
-            // Only re-initialize the home page if it's the very first load
-            if (!isInitialized) {
-                initHomePage();
-                isInitialized = true;
-            }
+            initHomePage();
         }
     };
 
-    const router = async () => {
-        // The router's only job is to load the main HTML file ONCE
-        // and then let the hashchange listener handle view swaps.
-        const pageToLoad = 'home'; // Always load home.html
-        
-        try {
-            const response = await fetch(`pages/${pageToLoad}.html`);
-            if (!response.ok) throw new Error('Main page not found');
-            content.innerHTML = await response.text();
-
-            // Set up listeners and trigger the first view change
-            window.addEventListener('hashchange', handleViewChange);
-            handleViewChange(); // Initial view rendering
-        } catch (error) {
-            content.innerHTML = `<p class="text-center text-red-500">${error.message}</p>`;
-        }
-    };
-
-    router(); // Initial load of the extension
-
-    // --- PAGE INITIALIZERS (Slightly modified to be re-runnable) ---
     const initHomePage = () => {
         const noteInput = document.getElementById('note-input');
         const saveNoteBtn = document.getElementById('save-note-btn');
@@ -158,15 +187,19 @@ document.addEventListener('DOMContentLoaded', () => {
             await fetchAndRenderRecent();
         };
         
-        saveNoteBtn.addEventListener('click', handleSave);
-        noteInput.addEventListener('keydown', e => { 
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault(); 
-                handleSave();
-            }
-        });
+        // Ensure listeners are only added once
+        if (!isInitialized) {
+            saveNoteBtn.addEventListener('click', handleSave);
+            noteInput.addEventListener('keydown', e => { 
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault(); 
+                    handleSave();
+                }
+            });
+            isInitialized = true;
+        }
 
-        fetchAndRenderRecent(); // Initial render for the home page
+        fetchAndRenderRecent(); 
     };
     
     const initAllNotesPage = async () => {
@@ -220,7 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
         
-        document.getElementById('add-folder-btn').onclick = async () => { // Use onclick to avoid duplicate listeners
+        document.getElementById('add-folder-btn').onclick = async () => { 
             const name = prompt('New folder name:');
             if(name && name.trim()) {
                  await fetch(`${API_BASE_URL}/folders`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ name }) });
@@ -228,7 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
 
-        foldersList.onclick = async (e) => { // Use onclick for event delegation
+        foldersList.onclick = async (e) => { 
             const folderEl = e.target.closest('.folder-dropzone');
             if(!folderEl) return;
             const folderId = folderEl.dataset.folderId;
@@ -269,5 +302,197 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             notesList.innerHTML = `<p class="text-gray-500 text-center py-4">This folder is empty.</p>`;
         }
+    };
+
+
+    // --- CHAT PAGE LOGIC ---
+    const initChatPage = () => {
+        // State variables
+        let activeThreadId = null;
+        let threads = [];
+
+        // DOM Element references
+        const newChatBtn = document.getElementById('new-chat-btn');
+        const threadsListEl = document.getElementById('chat-threads-list');
+        const chatTitleEl = document.getElementById('chat-title');
+        const messagesContainerEl = document.getElementById('chat-messages-container');
+        const chatInputEl = document.getElementById('chat-input');
+        const sendBtnEl = document.getElementById('send-chat-btn');
+        const chatFiltersEl = document.getElementById('chat-filters');
+
+        const renderThreads = () => {
+            threadsListEl.innerHTML = '';
+            if (threads.length === 0) {
+                threadsListEl.innerHTML = `<p class="text-gray-500 text-center text-sm py-4">No saved chats.</p>`;
+                return;
+            }
+            threads.forEach(thread => {
+                const threadEl = document.createElement('div');
+                // Ensure text color is visible (white in dark mode)
+                threadEl.className = `p-2 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/50 group flex justify-between items-center text-gray-800 dark:text-gray-100`; 
+                
+                if (thread.id === activeThreadId) {
+                    threadEl.classList.add('bg-blue-100', 'dark:bg-blue-900/50');
+                }
+                threadEl.dataset.threadId = thread.id;
+                threadEl.innerHTML = `
+                    <p class="truncate text-sm flex-grow">${thread.title}</p>
+                    <button title="Delete Thread" class="delete-thread-btn text-xs p-1 opacity-0 group-hover:opacity-100">🗑️</button>
+                `;
+                threadsListEl.appendChild(threadEl);
+            });
+        };
+
+        const renderMessages = (messages = []) => {
+            messagesContainerEl.innerHTML = '';
+            if (messages.length === 0) {
+                messagesContainerEl.innerHTML = `<div class="flex justify-center items-center h-full"><p class="text-gray-500 dark:text-gray-400">Type your first message below.</p></div>`;
+                return;
+            }
+            messages.forEach(msg => appendMessage(msg));
+        };
+        
+        const appendMessage = (msg) => {
+            if (messagesContainerEl.querySelector('.flex.justify-center')) {
+                messagesContainerEl.innerHTML = '';
+            }
+            const msgEl = document.createElement('div');
+            const isUser = msg.role === 'user';
+            msgEl.className = `flex flex-col ${isUser ? 'items-end' : 'items-start'}`;
+            
+            const contentEl = document.createElement('div');
+            contentEl.className = `max-w-lg p-3 rounded-lg ${isUser ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100'}`;
+            contentEl.innerText = msg.content; 
+            
+            const timeEl = document.createElement('p');
+            timeEl.className = 'text-xs text-gray-400 mt-1 px-1';
+            timeEl.textContent = formatTimestamp(msg.timestamp);
+
+            msgEl.appendChild(contentEl);
+            msgEl.appendChild(timeEl);
+            messagesContainerEl.appendChild(msgEl);
+            messagesContainerEl.scrollTop = messagesContainerEl.scrollHeight; 
+        };
+
+
+        const setActiveThread = async (threadId) => {
+            activeThreadId = threadId;
+
+            if (threadId === NEW_THREAD_ID) {
+                chatTitleEl.textContent = "New Chat (Unsaved)";
+                renderMessages([]);
+                chatInputEl.disabled = false;
+                sendBtnEl.disabled = false;
+            } else {
+                const thread = threads.find(t => t.id === threadId);
+                chatTitleEl.textContent = thread ? thread.title : "Loading...";
+                const res = await fetch(`${API_BASE_URL}/chat/threads/${threadId}/messages`);
+                const messages = await res.json();
+                renderMessages(messages);
+                chatInputEl.disabled = false;
+                sendBtnEl.disabled = false;
+            }
+            renderThreads();
+        };
+
+        const loadInitialData = async () => {
+            const res = await fetch(`${API_BASE_URL}/chat/threads`);
+            threads = await res.json();
+            
+            // Conditional Auto-Select: If no threads exist, start a new chat (ID 0). Otherwise, load the newest.
+            if (threads.length === 0) {
+                setActiveThread(NEW_THREAD_ID); 
+            } else {
+                setActiveThread(threads[0].id); 
+            }
+        };
+
+        const handleSendMessage = async () => {
+            const messageText = chatInputEl.value.trim();
+            if (!messageText) return;
+
+            sendBtnEl.disabled = true;
+            chatInputEl.disabled = true;
+
+            const userMessage = { content: messageText, role: 'user', timestamp: Math.floor(Date.now() / 1000) };
+            appendMessage(userMessage);
+            chatInputEl.value = '';
+
+            const activeFilters = Array.from(chatFiltersEl.querySelectorAll('input:checked')).map(input => input.value);
+            
+            // Send null thread_id if this is a NEW_THREAD_ID (unsaved chat)
+            const payloadThreadId = activeThreadId === NEW_THREAD_ID ? null : activeThreadId;
+
+            const response = await fetch(`${API_BASE_URL}/chat/message`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    thread_id: payloadThreadId,
+                    user_message: messageText,
+                    filters: activeFilters
+                })
+            });
+
+            const data = await response.json();
+            
+            if (activeThreadId === NEW_THREAD_ID) { 
+                // New thread was created in the backend
+                activeThreadId = data.thread.id;
+                threads.unshift(data.thread); 
+                chatTitleEl.textContent = data.thread.title;
+                renderThreads(); 
+            } else {
+                // Update timestamp for existing thread to float it to the top
+                const threadIndex = threads.findIndex(t => t.id === activeThreadId);
+                if (threadIndex > -1) {
+                    const updatedThread = threads.splice(threadIndex, 1)[0];
+                    updatedThread.timestamp = data.thread.timestamp; 
+                    threads.unshift(updatedThread); 
+                    renderThreads();
+                }
+            }
+            
+            appendMessage(data.model_message);
+
+            sendBtnEl.disabled = false;
+            chatInputEl.disabled = false;
+            chatInputEl.focus();
+        };
+
+        // Event Listeners
+        newChatBtn.addEventListener('click', () => setActiveThread(NEW_THREAD_ID));
+
+        threadsListEl.addEventListener('click', (e) => {
+            const threadEl = e.target.closest('[data-thread-id]');
+            if (!threadEl) return;
+            
+            const threadId = parseInt(threadEl.dataset.threadId, 10);
+            
+            if (e.target.matches('.delete-thread-btn')) {
+                e.stopPropagation(); 
+                if (confirm('Are you sure you want to delete this chat thread?')) {
+                    fetch(`${API_BASE_URL}/chat/threads/${threadId}`, { method: 'DELETE' })
+                        .then(() => {
+                            threads = threads.filter(t => t.id !== threadId);
+                            if (activeThreadId === threadId) {
+                                setActiveThread(NEW_THREAD_ID); 
+                            }
+                            renderThreads();
+                        });
+                }
+            } else {
+                setActiveThread(threadId);
+            }
+        });
+
+        sendBtnEl.addEventListener('click', handleSendMessage);
+        chatInputEl.addEventListener('keydown', e => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage();
+            }
+        });
+
+        loadInitialData();
     };
 });

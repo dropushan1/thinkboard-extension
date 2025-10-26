@@ -1,0 +1,31 @@
+<div class="w-full max-w-lg mx-auto flex flex-col h-full">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-4 flex-shrink-0">
+        <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100">Organize Notes</h1>
+        <a href="#home" class="text-sm text-blue-600 hover:underline">← Back to Home</a>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="flex-grow grid grid-cols-3 gap-4 overflow-hidden">
+        
+        <!-- Left Column: Folders -->
+        <div class="col-span-1 flex flex-col bg-white dark:bg-gray-800 p-3 rounded-lg shadow-md overflow-y-auto">
+            <h2 class="text-lg font-bold mb-3 text-gray-800 dark:text-gray-100">Folders</h2>
+            <div id="folders-list" class="space-y-2 flex-grow">
+                <!-- Folders will be rendered here -->
+            </div>
+            <div class="mt-2 pt-2 border-t dark:border-gray-600">
+                <!-- THE FIX IS ON THE NEXT LINE -->
+                <button id="add-folder-btn" class="w-full text-sm bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 py-2 px-3 rounded-md">+ Add Folder</button>
+            </div>
+        </div>
+
+        <!-- Right Column: Uncategorized Notes -->
+        <div class="col-span-2 flex flex-col bg-white dark:bg-gray-800 p-3 rounded-lg shadow-md overflow-y-auto">
+            <h2 class="text-lg font-bold mb-3 text-gray-800 dark:text-gray-100">Uncategorized Notes</h2>
+            <div id="uncategorized-notes-list" class="space-y-3">
+                <p id="empty-uncategorized-message" class="text-gray-500 text-center text-sm py-4">Drag notes here to un-categorize them, or drop them on a folder to the left.</p>
+            </div>
+        </div>
+    </div>
+</div>
