@@ -4,28 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ThinkBoard</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Force a fixed size for the popup -->
-    <style>
-        html, body {
-            width: 400px;
-            height: 600px;
-            min-width: 400px;
-            min-height: 600px;
-            overflow: hidden;
-        }
-    </style>
+    <!-- Tailwind CSS (Loaded locally) -->
+    <script src="vendor/tailwind.js"></script>
+    <!-- 
+        The fixed-size <style> block has been REMOVED from here.
+        The UI will now be responsive to the sidebar's width.
+    -->
 </head>
-<body class="bg-gray-100 text-gray-900">
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-900">
     <div id="app" class="flex flex-col h-full">
-        <header class="bg-white shadow-md flex-shrink-0">
-            <nav class="flex justify-around p-2">
-                <a href="#home" class="nav-link text-2xl p-2 rounded-lg hover:bg-gray-200" title="Home">🏠</a>
-                <a href="#chat" class="nav-link text-2xl p-2 rounded-lg hover:bg-gray-200" title="Chat">💬</a>
-                <a href="#words" class="nav-link text-2xl p-2 rounded-lg hover:bg-gray-200" title="Words">🔤</a>
-                <a href="#grammar" class="nav-link text-2xl p-2 rounded-lg hover:bg-gray-200" title="Grammar">✍️</a>
-                <a href="#settings" class="nav-link text-2xl p-2 rounded-lg hover:bg-gray-200" title="Settings">⚙️</a>
+        <header class="bg-white dark:bg-gray-800 shadow-md flex-shrink-0">
+            <nav class="flex justify-around p-1">
+                <a href="#home" class="nav-link text-3xl p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700" title="Home">🏠</a>
+                <a href="#chat" class="nav-link text-3xl p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700" title="Chat">💬</a>
+                <a href="#words" class="nav-link text-3xl p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700" title="Words">🔤</a>
+                <a href="#grammar" class="nav-link text-3xl p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700" title="Grammar">✍️</a>
+                <a href="#settings" class="nav-link text-3xl p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700" title="Settings">⚙️</a>
             </nav>
         </header>
         <main id="content" class="flex-grow p-4 overflow-y-auto">
