@@ -3,6 +3,9 @@
 import { formatTimestamp } from './utils.js';
 
 let API_BASE_URL;
+// --- ADDED: State variables to manage the options menu ---
+let openMenuEl = null;
+let isNotesDocumentListenerAdded = false;
 
 const createNoteElement = (note, isDraggable = false) => {
     const noteEl = document.createElement('div');
@@ -23,15 +26,21 @@ const createNoteElement = (note, isDraggable = false) => {
     contentDiv.appendChild(timeEl);
 
     const actionsEl = document.createElement('div');
-    actionsEl.className = 'flex-shrink-0 flex flex-col items-center space-y-1 opacity-0 group-hover:opacity-100 transition-opacity';
+    // --- UPDATED: Switched to horizontal layout and added 3-dot menu ---
+    actionsEl.className = 'flex-shrink-0 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity';
     actionsEl.innerHTML = `
         <button title="Copy Note" class="copy-btn text-gray-500 dark:text-gray-400 text-sm p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
         </button>
-        <button title="Edit Note" class="edit-btn text-sm p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600">🖊️</button>
-        <button title="Delete Note" class="delete-btn text-sm p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600">🗑️</button>
+        <div class="relative">
+            <button title="More Options" class="more-options-btn text-gray-500 dark:text-gray-400 p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600">•••</button>
+            <div class="options-menu hidden absolute right-0 top-6 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-md shadow-lg z-20 w-28">
+                <button class="rename-note-btn w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600">Rename</button>
+                <button class="delete-note-btn w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-600">Delete</button>
+            </div>
+        </div>
     `;
 
     noteEl.appendChild(contentDiv);
@@ -48,17 +57,35 @@ const createNoteElement = (note, isDraggable = false) => {
     return noteEl;
 };
 
+// --- UPDATED: Action handler now manages the menu state ---
 const handleNoteAction = async (e) => {
+    // --- FIXED: Guard clause prevents this listener from firing on other pages ---
+    if (!e.target.closest('#home-view, #all-notes-view, #folder-view')) {
+        return;
+    }
+
+    // Handle menu opening first
+    if (e.target.closest('.more-options-btn')) {
+        e.preventDefault();
+        const menu = e.target.closest('.relative').querySelector('.options-menu');
+        if (openMenuEl && openMenuEl !== menu) {
+            openMenuEl.classList.add('hidden');
+        }
+        menu.classList.toggle('hidden');
+        openMenuEl = menu.classList.contains('hidden') ? null : menu;
+        return;
+    }
+
     const noteItem = e.target.closest('.note-item');
     if (!noteItem) return;
     const noteId = noteItem.dataset.noteId;
 
-    if (e.target.closest('.delete-btn')) {
+    if (e.target.closest('.delete-note-btn')) {
         if (confirm('Are you sure you want to delete this note?')) {
             await fetch(`${API_BASE_URL}/notes/${noteId}`, { method: 'DELETE' });
-            initializeNotesFeature(API_BASE_URL);
+            initializeNotesFeature(API_BASE_URL); // Re-render the page
         }
-    } else if (e.target.closest('.edit-btn')) {
+    } else if (e.target.closest('.rename-note-btn')) {
         const textEl = noteItem.querySelector('.note-text');
         const newText = prompt('Edit your note:', textEl.textContent);
         if (newText && newText.trim() !== textEl.textContent) {
@@ -73,7 +100,6 @@ const handleNoteAction = async (e) => {
         }
     } else if (e.target.closest('.copy-btn')) {
         const textToCopy = noteItem.dataset.noteText;
-        // --- CHANGED: Removed the visual feedback (tick emoji). The copy action is now silent. ---
         navigator.clipboard.writeText(textToCopy).catch(err => {
             console.error('Failed to copy text: ', err);
             alert('Failed to copy text.');
@@ -214,7 +240,21 @@ const initFolderViewPage = async (folderId) => {
 export function initializeNotesFeature(apiUrl) {
     API_BASE_URL = apiUrl;
     const content = document.getElementById('content');
+    // Remove old listener to prevent duplicates from multiple initializations
+    content.removeEventListener('click', handleNoteAction);
     content.addEventListener('click', handleNoteAction);
+
+    // --- ADDED: Listener to close menu when clicking outside ---
+    // This check ensures the listener is only added once for the whole app session.
+    if (!isNotesDocumentListenerAdded) {
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.note-item .relative') && openMenuEl) {
+                openMenuEl.classList.add('hidden');
+                openMenuEl = null;
+            }
+        });
+        isNotesDocumentListenerAdded = true;
+    }
 
     const hash = window.location.hash.substring(1) || 'home';
     const [page, param] = hash.split('/');

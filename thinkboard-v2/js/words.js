@@ -2,6 +2,10 @@
 
 import { pronounceWord } from './utils.js';
 
+// --- ADDED: State variables for the options menu ---
+let openMenuEl = null;
+let isWordsDocumentListenerAdded = false;
+
 export function initWordsPage(API_BASE_URL) {
     let activeWordCategory = 'Pronunciation';
 
@@ -20,13 +24,22 @@ export function initWordsPage(API_BASE_URL) {
         el.dataset.wordText = word.word_text;
         el.draggable = true;
         
+        // --- UPDATED: HTML structure adjusted to place 3 dots immediately after the text ---
         el.innerHTML = `
-            <button title="Pronounce Word" class="speak-word-btn text-md p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600">🔊</button>
-            <p class="text-gray-800 dark:text-gray-200 text-sm ml-2">${word.word_text}</p>
-            <div class="flex-shrink-0 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity ml-4">
-                <button title="Edit Word" class="edit-word-btn text-xs p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600">🖋️</button>
-                <button title="Delete Word" class="delete-word-btn text-xs p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600">🗑️</button>
-            </div>`;
+            <button title="Pronounce Word" class="speak-word-btn text-md p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 flex-shrink-0">🔊</button>
+            
+            <!-- Removed flex-grow to keep text width minimal -->
+            <p class="text-gray-800 dark:text-gray-200 text-sm ml-2 mr-2 truncate">${word.word_text}</p> 
+            
+            <!-- Actions wrapper, opacity hides/shows the 3 dots -->
+            <div class="word-actions relative opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                <button title="More Options" class="more-options-btn text-gray-500 dark:text-gray-400 p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600">•••</button>
+                <div class="options-menu hidden absolute right-0 top-6 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-md shadow-lg z-20 w-28">
+                    <button class="edit-word-btn w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600">Edit</button>
+                    <button class="delete-word-btn w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-600">Delete</button>
+                </div>
+            </div>
+        `;
         
         el.addEventListener('dragstart', e => {
             e.dataTransfer.setData('text/plain', word.id);
@@ -79,19 +92,32 @@ export function initWordsPage(API_BASE_URL) {
     });
 
     wordsContent.addEventListener('click', async e => {
+        // --- ADDED: Logic to handle opening/closing the options menu ---
+        if (e.target.closest('.more-options-btn')) {
+            e.preventDefault();
+            const menu = e.target.closest('.relative').querySelector('.options-menu');
+            if (openMenuEl && openMenuEl !== menu) {
+                openMenuEl.classList.add('hidden');
+            }
+            menu.classList.toggle('hidden');
+            openMenuEl = menu.classList.contains('hidden') ? null : menu;
+            return; // Stop further execution
+        }
+
         const wordItem = e.target.closest('.word-item');
         if (!wordItem) return;
         const wordId = wordItem.dataset.wordId;
 
-        if (e.target.matches('.speak-word-btn')) {
+        // --- UPDATED: Changed .matches to .closest for reliability ---
+        if (e.target.closest('.speak-word-btn')) {
             const wordToSpeak = wordItem.dataset.wordText;
             await pronounceWord(wordToSpeak);
-        } else if (e.target.matches('.delete-word-btn')) {
+        } else if (e.target.closest('.delete-word-btn')) {
             if (confirm('Are you sure you want to delete this word?')) {
                 await fetch(`${API_BASE_URL}/words/${wordId}`, { method: 'DELETE' });
                 await renderWords(activeWordCategory);
             }
-        } else if (e.target.matches('.edit-word-btn')) {
+        } else if (e.target.closest('.edit-word-btn')) {
             const newText = prompt('Edit word:', wordItem.dataset.wordText);
             if (newText && newText.trim() !== wordItem.dataset.wordText) {
                 await fetch(`${API_BASE_URL}/words/${wordId}`, {
@@ -130,6 +156,18 @@ export function initWordsPage(API_BASE_URL) {
             await renderWords(activeWordCategory);
         }
     });
+    
+    // --- ADDED: Global listener to close the menu when clicking outside ---
+    if (!isWordsDocumentListenerAdded) {
+        document.addEventListener('click', (e) => {
+            // Check if the click is outside the relative container of a word item menu
+            if (!e.target.closest('.word-item .relative') && openMenuEl) {
+                openMenuEl.classList.add('hidden');
+                openMenuEl = null;
+            }
+        });
+        isWordsDocumentListenerAdded = true;
+    }
 
     renderWords(activeWordCategory);
 }
