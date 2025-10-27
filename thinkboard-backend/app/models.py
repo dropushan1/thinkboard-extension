@@ -28,7 +28,7 @@ class Note(db.Model):
             'folder_id': self.folder_id
         }
 
-# --- NEW CHAT MODELS ---
+# --- CHAT MODELS ---
 
 class ChatFolder(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -68,4 +68,25 @@ class ChatMessage(db.Model):
             'role': self.role,
             'timestamp': self.timestamp,
             'thread_id': self.thread_id
+        }
+
+# --- STUDY WORD MODEL ---
+
+class StudyWord(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    word_text = db.Column(db.String(100), nullable=False)
+    category = db.Column(db.String(50), nullable=False) # "Pronunciation", "Spelling", "Meaning"
+    # UPDATED: Added "Medium" as a valid status
+    status = db.Column(db.String(50), nullable=False, default='Active') # "Active", "Medium", "Learned"
+    notes = db.Column(db.Text, nullable=True)
+    timestamp = db.Column(db.Integer, nullable=False, default=lambda: int(time.time()))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'word_text': self.word_text,
+            'category': self.category,
+            'status': self.status,
+            'notes': self.notes,
+            'timestamp': self.timestamp
         }

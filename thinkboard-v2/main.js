@@ -111,15 +111,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Call the specific initializer for the loaded page
             if (pageToLoad === 'home') {
-                // Initialize the internal hash routing for the notes feature
-                window.removeEventListener('hashchange', router); // Temporarily remove main router
+                window.removeEventListener('hashchange', router); 
                 handleHomeViewChange(); 
                 window.addEventListener('hashchange', handleHomeViewChange);
-                window.addEventListener('hashchange', router); // Re-add main router (needed if hash changes to a different top-level page)
+                window.addEventListener('hashchange', router); 
             } else if (pageToLoad === 'chat') {
                 initChatPage();
+            } else if (pageToLoad === 'words') {
+                initWordsPage();
             }
-            // For other pages, content is static HTML.
 
         } catch (error) {
             console.error("Routing error:", error);
@@ -127,7 +127,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    // Initial load and listen for hash changes
     router();
     window.addEventListener('hashchange', router);
 
@@ -168,7 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const fetchAndRenderRecent = async () => {
             const res = await fetch(`${API_BASE_URL}/notes`);
             const notes = await res.json();
-            notesList.innerHTML = ''; // Clear previous content
+            notesList.innerHTML = ''; 
             if (notes.length > 0) {
                 notes.slice(0, 5).forEach(note => notesList.appendChild(createNoteElement(note)));
             } else {
@@ -187,7 +186,6 @@ document.addEventListener('DOMContentLoaded', () => {
             await fetchAndRenderRecent();
         };
         
-        // Ensure listeners are only added once
         if (!isInitialized) {
             saveNoteBtn.addEventListener('click', handleSave);
             noteInput.addEventListener('keydown', e => { 
@@ -307,11 +305,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- CHAT PAGE LOGIC ---
     const initChatPage = () => {
-        // State variables
         let activeThreadId = null;
         let threads = [];
 
-        // DOM Element references
         const newChatBtn = document.getElementById('new-chat-btn');
         const threadsListEl = document.getElementById('chat-threads-list');
         const chatTitleEl = document.getElementById('chat-title');
@@ -328,7 +324,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             threads.forEach(thread => {
                 const threadEl = document.createElement('div');
-                // Ensure text color is visible (white in dark mode)
                 threadEl.className = `p-2 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/50 group flex justify-between items-center text-gray-800 dark:text-gray-100`; 
                 
                 if (thread.id === activeThreadId) {
@@ -374,7 +369,6 @@ document.addEventListener('DOMContentLoaded', () => {
             messagesContainerEl.scrollTop = messagesContainerEl.scrollHeight; 
         };
 
-
         const setActiveThread = async (threadId) => {
             activeThreadId = threadId;
 
@@ -399,7 +393,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const res = await fetch(`${API_BASE_URL}/chat/threads`);
             threads = await res.json();
             
-            // Conditional Auto-Select: If no threads exist, start a new chat (ID 0). Otherwise, load the newest.
             if (threads.length === 0) {
                 setActiveThread(NEW_THREAD_ID); 
             } else {
@@ -420,7 +413,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const activeFilters = Array.from(chatFiltersEl.querySelectorAll('input:checked')).map(input => input.value);
             
-            // Send null thread_id if this is a NEW_THREAD_ID (unsaved chat)
             const payloadThreadId = activeThreadId === NEW_THREAD_ID ? null : activeThreadId;
 
             const response = await fetch(`${API_BASE_URL}/chat/message`, {
@@ -436,13 +428,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             
             if (activeThreadId === NEW_THREAD_ID) { 
-                // New thread was created in the backend
                 activeThreadId = data.thread.id;
                 threads.unshift(data.thread); 
                 chatTitleEl.textContent = data.thread.title;
                 renderThreads(); 
             } else {
-                // Update timestamp for existing thread to float it to the top
                 const threadIndex = threads.findIndex(t => t.id === activeThreadId);
                 if (threadIndex > -1) {
                     const updatedThread = threads.splice(threadIndex, 1)[0];
@@ -459,7 +449,6 @@ document.addEventListener('DOMContentLoaded', () => {
             chatInputEl.focus();
         };
 
-        // Event Listeners
         newChatBtn.addEventListener('click', () => setActiveThread(NEW_THREAD_ID));
 
         threadsListEl.addEventListener('click', (e) => {
@@ -495,4 +484,174 @@ document.addEventListener('DOMContentLoaded', () => {
 
         loadInitialData();
     };
+
+
+    // --- WORDS PAGE LOGIC ---
+    const initWordsPage = () => {
+        let activeWordCategory = 'Pronunciation'; // Default category
+
+        // DOM Elements
+        const wordsContent = document.getElementById('words-content');
+        const tabsContainer = document.getElementById('words-tabs');
+        const newWordInput = document.getElementById('new-word-input');
+        const addWordBtn = document.getElementById('add-word-btn');
+        const activeWordsList = document.getElementById('active-words-list');
+        const mediumWordsList = document.getElementById('medium-words-list');
+        const learnedWordsList = document.getElementById('learned-words-list');
+
+        const createWordElement = (word) => {
+            const el = document.createElement('div');
+            // Made UI more compact with p-2
+            el.className = 'word-item group bg-gray-50 dark:bg-gray-700/50 p-2 rounded-lg shadow-sm flex justify-between items-center cursor-grab';
+            el.dataset.wordId = word.id;
+            el.dataset.wordText = word.word_text;
+            el.draggable = true; // Make the element draggable
+
+            el.innerHTML = `
+                <p class="text-gray-800 dark:text-gray-200 text-sm">${word.word_text}</p>
+                <div class="flex-shrink-0 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button title="Edit Word" class="edit-word-btn text-xs p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600">🖋️</button>
+                    <button title="Delete Word" class="delete-word-btn text-xs p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600">❌</button>
+                </div>
+            `;
+
+            el.addEventListener('dragstart', e => {
+                e.dataTransfer.setData('text/plain', word.id);
+                setTimeout(() => el.classList.add('opacity-50'), 0);
+            });
+            el.addEventListener('dragend', () => el.classList.remove('opacity-50'));
+            
+            return el;
+        };
+
+        const renderWords = async (category) => {
+            // Update active tab UI
+            tabsContainer.querySelectorAll('.words-tab-btn').forEach(btn => {
+                btn.classList.toggle('bg-blue-100', btn.dataset.category === category);
+                btn.classList.toggle('dark:bg-blue-900/50', btn.dataset.category === category);
+            });
+
+            const res = await fetch(`${API_BASE_URL}/words?category=${category}`);
+            const words = await res.json();
+
+            activeWordsList.innerHTML = '';
+            mediumWordsList.innerHTML = '';
+            learnedWordsList.innerHTML = '';
+
+            const activeWords = words.filter(w => w.status === 'Active');
+            const mediumWords = words.filter(w => w.status === 'Medium');
+            const learnedWords = words.filter(w => w.status === 'Learned');
+
+            if (activeWords.length > 0) {
+                activeWords.forEach(word => activeWordsList.appendChild(createWordElement(word)));
+            } else {
+                activeWordsList.innerHTML = '<p class="text-gray-500 text-center text-xs py-4">Drag words here</p>';
+            }
+            
+            if (mediumWords.length > 0) {
+                mediumWords.forEach(word => mediumWordsList.appendChild(createWordElement(word)));
+            } else {
+                mediumWordsList.innerHTML = '<p class="text-gray-500 text-center text-xs py-4">Drag words here</p>';
+            }
+
+            if (learnedWords.length > 0) {
+                learnedWords.forEach(word => learnedWordsList.appendChild(createWordElement(word)));
+            } else {
+                learnedWordsList.innerHTML = '<p class="text-gray-500 text-center text-xs py-4">Drag words here</p>';
+            }
+        };
+
+        const handleAddWord = async () => {
+            const wordText = newWordInput.value.trim();
+            if (!wordText) return;
+
+            await fetch(`${API_BASE_URL}/words`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ word_text: wordText, category: activeWordCategory })
+            });
+
+            newWordInput.value = '';
+            await renderWords(activeWordCategory);
+        };
+        
+        // --- Event Listeners ---
+        tabsContainer.addEventListener('click', e => {
+            if (e.target.matches('.words-tab-btn')) {
+                activeWordCategory = e.target.dataset.category;
+                renderWords(activeWordCategory);
+            }
+        });
+
+        addWordBtn.addEventListener('click', handleAddWord);
+        newWordInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter') handleAddWord();
+        });
+
+        // Event delegation for word item actions (Edit, Delete)
+        wordsContent.addEventListener('click', async e => {
+            const wordItem = e.target.closest('.word-item');
+            if (!wordItem) return;
+
+            const wordId = wordItem.dataset.wordId;
+
+            if (e.target.matches('.delete-word-btn')) {
+                if (confirm('Are you sure you want to delete this word?')) {
+                    await fetch(`${API_BASE_URL}/words/${wordId}`, { method: 'DELETE' });
+                    await renderWords(activeWordCategory);
+                }
+            } else if (e.target.matches('.edit-word-btn')) {
+                const currentText = wordItem.dataset.wordText;
+                const newText = prompt('Edit word:', currentText);
+                if (newText && newText.trim() !== currentText) {
+                    await fetch(`${API_BASE_URL}/words/${wordId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ word_text: newText.trim() })
+                    });
+                    await renderWords(activeWordCategory);
+                }
+            }
+        });
+
+        // --- Drag and Drop Event Listeners ---
+        wordsContent.addEventListener('dragover', e => {
+            e.preventDefault();
+            const dropzone = e.target.closest('.word-dropzone');
+            if (dropzone) {
+                dropzone.classList.add('bg-blue-100', 'dark:bg-blue-900/50');
+            }
+        });
+
+        wordsContent.addEventListener('dragleave', e => {
+            const dropzone = e.target.closest('.word-dropzone');
+            if (dropzone) {
+                dropzone.classList.remove('bg-blue-100', 'dark:bg-blue-900/50');
+            }
+        });
+
+        wordsContent.addEventListener('drop', async e => {
+            e.preventDefault();
+            const dropzone = e.target.closest('.word-dropzone');
+            if (dropzone) {
+                dropzone.classList.remove('bg-blue-100', 'dark:bg-blue-900/50');
+                const wordId = e.dataTransfer.getData('text/plain');
+                const newStatus = dropzone.dataset.status;
+
+                // API call to update the word's status
+                await fetch(`${API_BASE_URL}/words/${wordId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: newStatus })
+                });
+
+                // Re-render the view to reflect the change
+                await renderWords(activeWordCategory);
+            }
+        });
+
+        // Initial render
+        renderWords(activeWordCategory);
+    };
+
 });
