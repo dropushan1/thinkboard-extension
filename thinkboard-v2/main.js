@@ -2,8 +2,9 @@
 import { initializeNotesFeature } from './js/notes.js';
 import { initChatPage } from './js/chat.js';
 import { initWordsPage } from './js/words.js';
-// --- ADDED: Import the new settings page initializer ---
 import { initSettingsPage } from './js/settings.js';
+// --- ADDED: Import the new grammar page initializer ---
+import { initGrammarPage } from './js/grammar.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const content = document.getElementById('content');
@@ -15,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const pageName = hash.split('/')[0];
 
         let pageToLoad = 'home';
+        // --- UPDATED: Added 'grammar' to the list of valid pages ---
         if (['chat', 'words', 'grammar', 'settings'].includes(pageName)) {
             pageToLoad = pageName;
         }
@@ -42,9 +44,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 case 'words':
                     initWordsPage(API_BASE_URL);
                     break;
-                // --- ADDED: Case for the new settings page ---
                 case 'settings':
                     initSettingsPage();
+                    break;
+                // --- ADDED: Case for the new grammar page ---
+                case 'grammar':
+                    initGrammarPage(API_BASE_URL);
                     break;
             }
         } catch (error) {

@@ -3,6 +3,7 @@ from flask import Blueprint, request, jsonify
 from .models import Note, Folder, ChatThread, ChatMessage, ChatFolder, StudyWord
 from . import db
 import time
+import json # Import the json library for structured AI response handling
 from google import genai
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
@@ -12,7 +13,7 @@ API_KEY = "AIzaSyAlAylJfvQd15zgdymkHagWW-5nVjQtsac"
 client = genai.Client(api_key=API_KEY)
 GEMINI_MODEL = "gemini-2.5-flash"
 
-# --- Note Routes [No Changes] ---
+# --- Note Routes ---
 @api_bp.route('/notes', methods=['POST'])
 def create_note():
     data = request.get_json()
@@ -50,7 +51,7 @@ def delete_note(note_id):
     db.session.commit()
     return '', 204
 
-# --- Folder Routes [No Changes] ---
+# --- Folder Routes ---
 @api_bp.route('/folders', methods=['POST'])
 def create_folder():
     data = request.get_json()
@@ -90,7 +91,7 @@ def delete_folder(folder_id):
     db.session.commit()
     return '', 204
 
-# --- Study Word Routes [No Changes] ---
+# --- Study Word Routes ---
 @api_bp.route('/words', methods=['GET'])
 def get_words():
     category = request.args.get('category')
@@ -171,7 +172,6 @@ def get_chat_data():
     response_data = {"folders": [folder.to_dict() for folder in folders], "threads": [thread.to_dict() for thread in threads]}
     return jsonify(response_data)
 
-# --- UPDATED: This route now also handles renaming a thread ---
 @api_bp.route('/chat/threads/<int:thread_id>', methods=['PUT'])
 def update_chat_thread(thread_id):
     thread = ChatThread.query.get_or_404(thread_id)
@@ -258,3 +258,66 @@ def send_chat_message():
         'model_message': model_msg_obj.to_dict(),
         'thread': thread.to_dict()
     }), 201
+
+
+# --- NEW: GRAMMAR CORRECTION ROUTE ---
+@api_bp.route('/grammar/correct', methods=['POST'])
+def correct_grammar():
+    data = request.get_json()
+    text_to_correct = data.get('text')
+    include_advice = data.get('include_advice', False)
+
+    if not text_to_correct or not text_to_correct.strip():
+        return jsonify({'error': 'Text to correct cannot be empty'}), 400
+
+    # --- Prompt Engineering ---
+    if include_advice:
+        prompt = f"""
+            You are a grammar correction assistant. Analyze the following text and provide a corrected version, along with advice and a list of specific mistakes.
+
+            Your output MUST be a valid JSON object with the following three keys: "corrected_text", "advice", and "mistakes".
+
+            1.  `corrected_text`: The fully corrected version of the user's text.
+            2.  `advice`: A brief, friendly summary of the main types of errors found (e.g., "I noticed a few run-on sentences and some spelling errors.").
+            3.  `mistakes`: An array of objects, where each object has two keys: "original" (the incorrect word/phrase) and "corrected" (the fixed word/phrase). List only the specific words or short phrases that were changed.
+
+            Example JSON structure:
+            {{
+              "corrected_text": "This is the corrected sentence.",
+              "advice": "I corrected a spelling mistake and a grammatical error.",
+              "mistakes": [
+                {{ "original": "sentance", "corrected": "sentence" }},
+                {{ "original": "This are", "corrected": "This is" }}
+              ]
+            }}
+
+            --- TEXT TO CORRECT ---
+            {text_to_correct}
+            --- END OF TEXT ---
+        """
+    else:
+        prompt = f"""
+            You are a grammar correction assistant. Correct any spelling and grammar mistakes in the following text.
+            Return ONLY the corrected text, with no extra explanations, greetings, or formatting.
+
+            --- TEXT TO CORRECT ---
+            {text_to_correct}
+            --- END OF TEXT ---
+        """
+
+    try:
+        response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
+        
+        if include_advice:
+            # Clean the response to ensure it's valid JSON
+            cleaned_response = response.text.strip().replace('```json', '').replace('```', '')
+            # Parse the JSON string into a Python dictionary
+            json_response = json.loads(cleaned_response)
+            return jsonify(json_response)
+        else:
+            # For the simple case, return the text directly in a structured object
+            return jsonify({'corrected_text': response.text.strip()})
+
+    except Exception as e:
+        print(f"Gemini API or JSON Parsing Error: {e}")
+        return jsonify({'error': f'Failed to process the text. Error: {str(e)}'}), 500

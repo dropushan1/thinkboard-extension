@@ -17,9 +17,10 @@
     </div>
 
     <!-- Main Content Area for Word Lists (now 3 columns) -->
-    <div id="words-content" class="flex-grow grid grid-cols-1 md:grid-cols-3 gap-4 overflow-hidden">
+    <!-- FIXED: Changed 'gap-4' to 'gap-2 md:gap-4'. This makes the vertical space small on mobile/compressed view. -->
+    <div id="words-content" class="flex-grow grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-4 overflow-hidden items-start">
         
-        <!-- Active Words Column -->
+        <!-- Active Words Column (Kept stretching/flex layout to fill remaining space) -->
         <div class="word-dropzone flex flex-col bg-white dark:bg-gray-800 p-3 rounded-lg shadow-md overflow-y-auto" data-status="Active">
             <h2 class="text-lg font-bold mb-3 text-gray-800 dark:text-gray-100 flex-shrink-0">Active Words</h2>
             <div id="active-words-list" class="space-y-2 overflow-y-auto h-full">
@@ -28,24 +29,24 @@
         </div>
 
         <!-- Medium Words Column (Collapsible) -->
-        <div class="word-dropzone flex flex-col bg-white dark:bg-gray-800 p-3 rounded-lg shadow-md overflow-y-auto" data-status="Medium">
-            <details class="flex flex-col h-full overflow-y-auto">
+        <div class="word-dropzone bg-white dark:bg-gray-800 p-3 rounded-lg shadow-md" data-status="Medium">
+            <details>
                 <summary class="text-lg font-bold text-gray-800 dark:text-gray-100 cursor-pointer list-none flex-shrink-0">
                     <span class="summary-arrow mr-2">▶</span>Medium Words
                 </summary>
-                <div id="medium-words-list" class="space-y-2 mt-3 h-full">
+                <div id="medium-words-list" class="space-y-2 mt-3 overflow-y-auto max-h-96">
                     <!-- Medium words will be dynamically inserted here -->
                 </div>
             </details>
         </div>
         
         <!-- Learned Words Column (Collapsible) -->
-        <div class="word-dropzone flex flex-col bg-white dark:bg-gray-800 p-3 rounded-lg shadow-md overflow-y-auto" data-status="Learned">
-             <details class="flex flex-col h-full overflow-y-auto">
+        <div class="word-dropzone bg-white dark:bg-gray-800 p-3 rounded-lg shadow-md" data-status="Learned">
+             <details>
                 <summary class="text-lg font-bold text-gray-800 dark:text-gray-100 cursor-pointer list-none flex-shrink-0">
                     <span class="summary-arrow mr-2">▶</span>Learned Words
                 </summary>
-                <div id="learned-words-list" class="space-y-2 mt-3 h-full">
+                <div id="learned-words-list" class="space-y-2 mt-3 overflow-y-auto max-h-96">
                     <!-- Learned words will be dynamically inserted here -->
                 </div>
             </details>
