@@ -1,3 +1,4 @@
+<!-- thinkboard-frontend/popup.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,9 +7,87 @@
     <title>ThinkBoard</title>
     <!-- Tailwind CSS (Loaded locally) -->
     <script src="vendor/tailwind.js"></script>
+    <!-- Local Marked.js library -->
+    <script src="vendor/marked.min.js"></script>
+
+    <!-- UPDATED: A completely new, more robust styling method for lists -->
+    <style>
+        /* 1. Reset the list's default styles */
+        .chat-bubble-content ul, .chat-bubble-content ol {
+            list-style: none;
+            padding-left: 0;
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        /* 2. Create a "hanging indent" for each list item */
+        .chat-bubble-content li {
+            /* This makes the <li> a positioning container for the bullet */
+            position: relative; 
+            /* This pushes the text to the right, creating space for the bullet.
+               All lines of text, including wrapped lines, will start here. */
+            padding-left: 1.2em; 
+            margin-bottom: 0.25rem;
+        }
+
+        /* 3. Position our custom bullet within the padded space */
+        .chat-bubble-content li::before {
+            /* Position the bullet relative to the <li> */
+            position: absolute; 
+            /* Place it at the very beginning of the <li>, inside the padding area */
+            left: 0;
+            top: 0; /* Aligns bullet with the top of the text */
+        }
+        
+        /* 4. Define the content for the custom bullet */
+        .chat-bubble-content ul > li::before {
+            content: '•'; /* The bullet character */
+            /* This adds a tiny bit of space after the bullet. Adjust if needed. */
+            padding-right: 0.4em; 
+        }
+
+        /* 5. Handle ordered (numbered) lists correctly */
+        .chat-bubble-content ol {
+            counter-reset: list-counter;
+        }
+        .chat-bubble-content ol > li {
+            counter-increment: list-counter;
+        }
+        .chat-bubble-content ol > li::before {
+            content: counter(list-counter) "."; /* e.g., "1.", "2." */
+            /* Add space after the number+period */
+            padding-right: 0.4em; 
+        }
+
+        /* --- Other styles remain the same --- */
+        .chat-bubble-content p {
+            margin-bottom: 0.5rem;
+        }
+        .chat-bubble-content p:last-child {
+            margin-bottom: 0;
+        }
+        .chat-bubble-content code {
+            background-color: rgba(199, 203, 209, 0.4);
+            border-radius: 4px;
+            padding: 2px 5px;
+            font-family: monospace;
+        }
+        .chat-bubble-content pre {
+            background-color: #f3f4f6;
+            padding: 0.75rem;
+            border-radius: 0.375rem;
+            overflow-x: auto;
+            margin-bottom: 0.5rem;
+        }
+        .dark .chat-bubble-content code {
+             background-color: rgba(75, 85, 99, 0.7);
+        }
+        .dark .chat-bubble-content pre {
+            background-color: #1f2937;
+        }
+    </style>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-900">
-    <!-- CHANGED: h-full is now h-screen -->
     <div id="app" class="flex flex-col h-screen">
         <header class="bg-white dark:bg-gray-800 shadow-md flex-shrink-0">
             <nav class="flex justify-around p-1">
@@ -23,7 +102,6 @@
             <!-- Page content will be loaded here -->
         </main>
     </div>
-    <!-- Load main.js as a module to enable import/export -->
     <script type="module" src="main.js"></script>
 </body>
 </html>

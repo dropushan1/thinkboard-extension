@@ -1,4 +1,5 @@
-// js/chat.js
+// thinkboard-frontend/js/chat.js
+
 import { formatTimestamp, pronounceWord } from './utils.js';
 
 const NEW_THREAD_ID = 0;
@@ -135,7 +136,6 @@ export function initChatPage(API_BASE_URL) {
         chatSidebarContent.appendChild(uncategorizedSection);
     };
 
-    // CHANGED: Fixed SVG and footer alignment logic
     const appendMessage = (msg) => {
         if (messagesContainerEl.querySelector('.flex.justify-center')) {
             messagesContainerEl.innerHTML = '';
@@ -148,18 +148,24 @@ export function initChatPage(API_BASE_URL) {
         bubbleContainer.className = `flex items-start max-w-xl ${isUser ? 'flex-row-reverse' : 'space-x-2'}`;
         
         const contentEl = document.createElement('div');
-        contentEl.className = `p-3 rounded-lg ${isUser ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100'}`;
-        contentEl.innerText = msg.content;
+        // --- UPDATED: Added a class for styling markdown content ---
+        contentEl.className = `p-3 rounded-lg chat-bubble-content ${isUser ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100'}`;
+        
+        // --- UPDATED: Use innerHTML with marked for AI, innerText for user ---
+        if (isUser) {
+            contentEl.innerText = msg.content;
+        } else {
+            // This converts markdown to HTML
+            contentEl.innerHTML = marked.parse(msg.content);
+        }
         
         bubbleContainer.appendChild(contentEl);
         msgEl.appendChild(bubbleContainer);
 
-        // This footer will now cluster all items based on alignment
         const footerEl = document.createElement('div');
-        const alignmentClass = isUser ? 'justify-end' : 'justify-start'; // Conditional alignment
+        const alignmentClass = isUser ? 'justify-end' : 'justify-start';
         footerEl.className = `flex items-center ${alignmentClass} space-x-2 w-full max-w-xl mt-1 px-1`;
 
-        // Add action icons FIRST (if it's a model message)
         if (!isUser) {
             const actionsEl = document.createElement('div');
             actionsEl.className = 'flex items-center space-x-2';
@@ -176,7 +182,6 @@ export function initChatPage(API_BASE_URL) {
             footerEl.appendChild(actionsEl);
         }
 
-        // Add timestamp SECOND
         const timeEl = document.createElement('p');
         timeEl.className = 'text-xs text-gray-400';
         timeEl.textContent = formatTimestamp(msg.timestamp);
