@@ -6,10 +6,6 @@
     <title>ThinkBoard</title>
     <!-- Tailwind CSS (Loaded locally) -->
     <script src="vendor/tailwind.js"></script>
-    <!-- 
-        The fixed-size <style> block has been REMOVED from here.
-        The UI will now be responsive to the sidebar's width.
-    -->
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-900">
     <div id="app" class="flex flex-col h-full">
@@ -26,6 +22,7 @@
             <!-- Page content will be loaded here -->
         </main>
     </div>
-    <script src="main.js"></script>
+    <!-- Load main.js as a module to enable import/export -->
+    <script type="module" src="main.js"></script>
 </body>
 </html>
