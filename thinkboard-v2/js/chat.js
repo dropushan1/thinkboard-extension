@@ -1,5 +1,5 @@
 // js/chat.js
-import { formatTimestamp } from './utils.js';
+import { formatTimestamp, pronounceWord } from './utils.js';
 
 const NEW_THREAD_ID = 0;
 
@@ -7,6 +7,7 @@ export function initChatPage(API_BASE_URL) {
     let activeThreadId = null;
     let threads = [];
 
+    // --- Element references (These MUST be inside initChatPage) ---
     const newChatBtn = document.getElementById('new-chat-btn');
     const threadsListEl = document.getElementById('chat-threads-list');
     const chatTitleEl = document.getElementById('chat-title');
@@ -43,13 +44,36 @@ export function initChatPage(API_BASE_URL) {
         const msgEl = document.createElement('div');
         const isUser = msg.role === 'user';
         msgEl.className = `flex flex-col ${isUser ? 'items-end' : 'items-start'}`;
+
+        const bubbleContainer = document.createElement('div');
+        bubbleContainer.className = `flex items-start ${isUser ? 'flex-row-reverse' : 'space-x-2'}`;
+        
         const contentEl = document.createElement('div');
         contentEl.className = `max-w-lg p-3 rounded-lg ${isUser ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100'}`;
         contentEl.innerText = msg.content;
+        
+        bubbleContainer.appendChild(contentEl);
+        
+        if (!isUser) {
+            const actionsEl = document.createElement('div');
+            actionsEl.className = 'flex-shrink-0 flex flex-col space-y-1 mt-1';
+            actionsEl.innerHTML = `
+                <button title="Copy Text" class="chat-copy-btn text-gray-500 dark:text-gray-400 text-sm p-1 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                </button>
+                <button title="Read Aloud" class="chat-speak-btn text-xs p-1 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600" data-content="${msg.content}">🔊</button>
+            `;
+            actionsEl.querySelector('.chat-copy-btn').dataset.content = msg.content;
+            bubbleContainer.appendChild(actionsEl);
+        }
+
         const timeEl = document.createElement('p');
         timeEl.className = 'text-xs text-gray-400 mt-1 px-1';
         timeEl.textContent = formatTimestamp(msg.timestamp);
-        msgEl.appendChild(contentEl);
+
+        msgEl.appendChild(bubbleContainer);
         msgEl.appendChild(timeEl);
         messagesContainerEl.appendChild(msgEl);
         messagesContainerEl.scrollTop = messagesContainerEl.scrollHeight;
@@ -145,6 +169,28 @@ export function initChatPage(API_BASE_URL) {
             }
         } else {
             setActiveThread(threadId);
+        }
+    });
+    
+    // --- Event listener for copy and speak buttons ---
+    messagesContainerEl.addEventListener('click', async (e) => {
+        const copyBtn = e.target.closest('.chat-copy-btn');
+        if (copyBtn) {
+            const content = copyBtn.dataset.content;
+            // The copy action is now silent, with no visual feedback.
+            navigator.clipboard.writeText(content).catch(err => {
+                console.error('Failed to copy text: ', err);
+            });
+        }
+
+        const speakBtn = e.target.closest('.chat-speak-btn');
+        if (speakBtn) {
+            const content = speakBtn.dataset.content;
+            if (window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
+            } else {
+                await pronounceWord(content);
+            }
         }
     });
 

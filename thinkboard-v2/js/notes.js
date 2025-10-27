@@ -8,6 +8,7 @@ const createNoteElement = (note, isDraggable = false) => {
     const noteEl = document.createElement('div');
     noteEl.className = 'note-item group bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg shadow-sm flex justify-between items-start transition-shadow hover:shadow-md';
     noteEl.dataset.noteId = note.id;
+    noteEl.dataset.noteText = note.text;
     noteEl.draggable = isDraggable;
 
     const contentDiv = document.createElement('div');
@@ -22,8 +23,13 @@ const createNoteElement = (note, isDraggable = false) => {
     contentDiv.appendChild(timeEl);
 
     const actionsEl = document.createElement('div');
-    actionsEl.className = 'flex-shrink-0 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity';
+    actionsEl.className = 'flex-shrink-0 flex flex-col items-center space-y-1 opacity-0 group-hover:opacity-100 transition-opacity';
     actionsEl.innerHTML = `
+        <button title="Copy Note" class="copy-btn text-gray-500 dark:text-gray-400 text-sm p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+        </button>
         <button title="Edit Note" class="edit-btn text-sm p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600">🖊️</button>
         <button title="Delete Note" class="delete-btn text-sm p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600">🗑️</button>
     `;
@@ -47,12 +53,12 @@ const handleNoteAction = async (e) => {
     if (!noteItem) return;
     const noteId = noteItem.dataset.noteId;
 
-    if (e.target.matches('.delete-btn')) {
+    if (e.target.closest('.delete-btn')) {
         if (confirm('Are you sure you want to delete this note?')) {
             await fetch(`${API_BASE_URL}/notes/${noteId}`, { method: 'DELETE' });
-            initializeNotesFeature(API_BASE_URL); // Re-render the current view
+            initializeNotesFeature(API_BASE_URL);
         }
-    } else if (e.target.matches('.edit-btn')) {
+    } else if (e.target.closest('.edit-btn')) {
         const textEl = noteItem.querySelector('.note-text');
         const newText = prompt('Edit your note:', textEl.textContent);
         if (newText && newText.trim() !== textEl.textContent) {
@@ -65,6 +71,13 @@ const handleNoteAction = async (e) => {
             textEl.textContent = updatedNote.text;
             noteItem.querySelector('.text-xs').textContent = formatTimestamp(updatedNote.timestamp);
         }
+    } else if (e.target.closest('.copy-btn')) {
+        const textToCopy = noteItem.dataset.noteText;
+        // --- CHANGED: Removed the visual feedback (tick emoji). The copy action is now silent. ---
+        navigator.clipboard.writeText(textToCopy).catch(err => {
+            console.error('Failed to copy text: ', err);
+            alert('Failed to copy text.');
+        });
     }
 };
 

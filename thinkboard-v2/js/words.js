@@ -1,5 +1,7 @@
 // js/words.js
 
+import { pronounceWord } from './utils.js';
+
 export function initWordsPage(API_BASE_URL) {
     let activeWordCategory = 'Pronunciation';
 
@@ -11,31 +13,6 @@ export function initWordsPage(API_BASE_URL) {
     const mediumWordsList = document.getElementById('medium-words-list');
     const learnedWordsList = document.getElementById('learned-words-list');
 
-    /**
-     * Pronounces the given text using the browser's Text-to-Speech engine.
-     * @param {string} text - The word or phrase to speak.
-     */
-    const pronounceWord = (text) => {
-        // Check if the browser supports the Speech Synthesis API
-        if ('speechSynthesis' in window) {
-            // Cancel any ongoing speech to prevent overlap
-            window.speechSynthesis.cancel();
-            
-            // Create a new speech utterance
-            const utterance = new SpeechSynthesisUtterance(text);
-            
-            // Optional: Set language for better pronunciation accuracy
-            utterance.lang = 'en-US';
-            
-            // Speak the text
-            window.speechSynthesis.speak(utterance);
-        } else {
-            // Log an error if the API is not supported
-            console.error("Sorry, your browser does not support text-to-speech.");
-            alert("Sorry, your browser does not support text-to-speech.");
-        }
-    };
-
     const createWordElement = (word) => {
         const el = document.createElement('div');
         el.className = 'word-item group bg-gray-50 dark:bg-gray-700/50 p-2 rounded-lg shadow-sm flex items-center cursor-grab';
@@ -43,7 +20,6 @@ export function initWordsPage(API_BASE_URL) {
         el.dataset.wordText = word.word_text;
         el.draggable = true;
         
-        // --- UPDATED: Increased left margin to ml-4 and changed delete icon to 🗑️ ---
         el.innerHTML = `
             <button title="Pronounce Word" class="speak-word-btn text-md p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600">🔊</button>
             <p class="text-gray-800 dark:text-gray-200 text-sm ml-2">${word.word_text}</p>
@@ -109,7 +85,7 @@ export function initWordsPage(API_BASE_URL) {
 
         if (e.target.matches('.speak-word-btn')) {
             const wordToSpeak = wordItem.dataset.wordText;
-            pronounceWord(wordToSpeak);
+            await pronounceWord(wordToSpeak);
         } else if (e.target.matches('.delete-word-btn')) {
             if (confirm('Are you sure you want to delete this word?')) {
                 await fetch(`${API_BASE_URL}/words/${wordId}`, { method: 'DELETE' });

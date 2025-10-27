@@ -4,7 +4,8 @@
   "version": "1.0",
   "description": "A modern tool to enhance your thinking and learning.",
   "permissions": [
-    "sidePanel"
+    "sidePanel",
+    "storage" 
   ],
   "side_panel": {
     "default_path": "popup.html"
