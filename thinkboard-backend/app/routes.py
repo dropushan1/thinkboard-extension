@@ -274,6 +274,8 @@ def correct_grammar():
     if include_advice:
         prompt = f"""
             You are a grammar correction assistant. Analyze the following text and provide a corrected version, along with advice and a list of specific mistakes.
+            
+            **CRITICAL INSTRUCTION: DO NOT alter the user's vocabulary, tone, or style. Maintain the original harshness or emotional content. Only correct errors in grammar, spelling, and punctuation.**
 
             Your output MUST be a valid JSON object with the following three keys: "corrected_text", "advice", and "mistakes".
 
@@ -298,6 +300,7 @@ def correct_grammar():
     else:
         prompt = f"""
             You are a grammar correction assistant. Correct any spelling and grammar mistakes in the following text.
+            **CRITICAL INSTRUCTION: DO NOT alter the user's vocabulary, tone, or style. Maintain the original harshness or emotional content. Only correct errors in grammar, spelling, and punctuation.**
             Return ONLY the corrected text, with no extra explanations, greetings, or formatting.
 
             --- TEXT TO CORRECT ---
