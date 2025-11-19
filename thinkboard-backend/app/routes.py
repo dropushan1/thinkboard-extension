@@ -3,13 +3,20 @@ from flask import Blueprint, request, jsonify
 from .models import Note, Folder, ChatThread, ChatMessage, ChatFolder, StudyWord
 from . import db
 import time
-import json # Import the json library for structured AI response handling
+import json 
 from google import genai
+import os # NEW IMPORT
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
 # --- Gemini API Configuration ---
-API_KEY = "AIzaSyAlAylJfvQd15zgdymkHagWW-5nVjQtsac"
+# KEY IS RETRIEVED FROM THE .env FILE
+API_KEY = os.getenv("GEMINI_API_KEY")
+
+if not API_KEY:
+    # This will raise an error if the .env file is missing or the key isn't set
+    raise ValueError("GEMINI_API_KEY environment variable not set. Please check your .env file.")
+
 client = genai.Client(api_key=API_KEY)
 GEMINI_MODEL = "gemini-2.5-flash"
 
@@ -258,7 +265,6 @@ def send_chat_message():
         'model_message': model_msg_obj.to_dict(),
         'thread': thread.to_dict()
     }), 201
-
 
 # --- NEW: GRAMMAR CORRECTION ROUTE ---
 @api_bp.route('/grammar/correct', methods=['POST'])

@@ -1,4 +1,5 @@
 Flask
 Flask-SQLAlchemy
 Flask-Cors
-python-dotenv
+python-dotenv  <-- Added this (and fixed the typo in your original file)
+google-genai
