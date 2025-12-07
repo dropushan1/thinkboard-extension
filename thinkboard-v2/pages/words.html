@@ -1,4 +1,4 @@
-<div class="flex flex-col min-h-full space-y-4">
+<div class="flex flex-col min-h-full space-y-4 pb-12">
     <!-- Tab Navigation -->
     <div class="flex-shrink-0 bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md">
         <nav id="words-tabs" class="flex justify-around">
@@ -42,7 +42,7 @@
                     class="text-lg font-bold mb-3 text-gray-800 dark:text-gray-100 flex-shrink-0 cursor-pointer list-none">
                     <span class="summary-arrow mr-2">▶</span>Active Words
                 </summary>
-                <div id="active-words-list" class="space-y-2">
+                <div id="active-words-list" class="space-y-2 max-h-64 overflow-y-auto pr-1">
                     <!-- Active words will be dynamically inserted here -->
                 </div>
             </details>
@@ -55,7 +55,7 @@
                     class="text-lg font-bold text-gray-800 dark:text-gray-100 cursor-pointer list-none flex-shrink-0">
                     <span class="summary-arrow mr-2">▶</span>Medium Words
                 </summary>
-                <div id="medium-words-list" class="space-y-2 mt-3">
+                <div id="medium-words-list" class="space-y-2 mt-3 max-h-64 overflow-y-auto pr-1">
                     <!-- Medium words will be dynamically inserted here -->
                 </div>
             </details>
@@ -68,7 +68,7 @@
                     class="text-lg font-bold text-gray-800 dark:text-gray-100 cursor-pointer list-none flex-shrink-0">
                     <span class="summary-arrow mr-2">▶</span>Learned Words
                 </summary>
-                <div id="learned-words-list" class="space-y-2 mt-3">
+                <div id="learned-words-list" class="space-y-2 mt-3 max-h-64 overflow-y-auto pr-1">
                     <!-- Learned words will be dynamically inserted here -->
                 </div>
             </details>

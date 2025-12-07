@@ -1,19 +1,35 @@
 <div class="max-w-4xl mx-auto flex flex-col h-full space-y-4">
     <!-- Header -->
-    <div class="flex-shrink-0">
-        <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100">Grammar & Spelling Correction</h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400">Paste your text below and let the AI assistant help you improve it.</p>
+    <div class="flex-shrink-0 flex justify-between items-start">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100">Grammar & Spelling Correction</h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Paste your text below and let the AI assistant help you
+                improve it.</p>
+        </div>
+        <button id="restart-grammar-btn"
+            class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+            title="Restart / Clear All">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+        </button>
     </div>
 
     <!-- Input Card -->
     <div class="flex-shrink-0 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md">
-        <textarea id="grammar-input" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" rows="8" placeholder="Paste your text here..."></textarea>
+        <textarea id="grammar-input"
+            class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+            rows="8" placeholder="Paste your text here..."></textarea>
         <div class="flex justify-between items-center mt-3">
             <label class="flex items-center space-x-2 cursor-pointer">
-                <input type="checkbox" id="show-advice-toggle" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                <input type="checkbox" id="show-advice-toggle"
+                    class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                 <span class="text-sm text-gray-700 dark:text-gray-200">Show advice + common mistakes</span>
             </label>
-            <button id="correct-grammar-btn" class="bg-blue-600 text-white py-2 px-5 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-400">
+            <button id="correct-grammar-btn"
+                class="bg-blue-600 text-white py-2 px-5 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-400">
                 Correct
             </button>
         </div>
@@ -32,7 +48,8 @@
             <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md">
                 <h2 class="text-lg font-bold mb-2 text-gray-800 dark:text-gray-100">Corrected Text</h2>
                 <div id="corrected-text-output" class="text-gray-700 dark:text-gray-200 whitespace-pre-wrap"></div>
-                 <button id="copy-corrected-btn" class="mt-4 text-sm bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 py-2 px-3 rounded-md">
+                <button id="copy-corrected-btn"
+                    class="mt-4 text-sm bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 py-2 px-3 rounded-md">
                     📋 Copy Corrected Text
                 </button>
             </div>
@@ -42,13 +59,15 @@
         <div id="advice-mistakes-area" class="hidden bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md">
             <h3 class="text-md font-bold text-gray-800 dark:text-gray-100">Advice</h3>
             <p id="correction-advice" class="text-sm text-gray-600 dark:text-gray-300 mt-1 mb-4"></p>
-            
+
             <h3 class="text-md font-bold text-gray-800 dark:text-gray-100">Common Mistakes</h3>
-            <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">Select words you want to save to your "Words" spelling list.</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">Select words you want to save to your "Words"
+                spelling list.</p>
             <div id="mistakes-list" class="space-y-2">
                 <!-- Mistakes will be dynamically inserted here -->
             </div>
-            <button id="save-mistakes-btn" class="hidden mt-4 text-sm bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700">
+            <button id="save-mistakes-btn"
+                class="hidden mt-4 text-sm bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700">
                 Save Selected to Words → Spelling
             </button>
         </div>

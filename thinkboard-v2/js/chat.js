@@ -10,7 +10,7 @@ export function initChatPage(API_BASE_URL) {
         folders: [],
         threads: [],
         activeThreadId: null,
-        isSidebarVisible: true
+        isSidebarVisible: false // CHANGED: Default to hidden (Full Screen)
     };
     let openMenuEl = null;
 
@@ -25,10 +25,14 @@ export function initChatPage(API_BASE_URL) {
     const messagesContainerEl = document.getElementById('chat-messages-container');
     const chatInputEl = document.getElementById('chat-input');
     const sendBtnEl = document.getElementById('send-chat-btn');
-    
-    const filterToggleBtn = document.getElementById('chat-filter-toggle-btn');
-    const filterPopover = document.getElementById('chat-filters-popover');
-    const chatFiltersEl = document.getElementById('chat-filters');
+
+    // --- SYSTEM PROMPT ELEMENTS ---
+    const systemPromptToggleBtn = document.getElementById('system-prompt-toggle-btn');
+    const systemPromptPopover = document.getElementById('system-prompt-popover');
+    const savedPromptsSelect = document.getElementById('saved-prompts-select');
+    const systemPromptTextarea = document.getElementById('system-prompt-textarea');
+    const savePromptBtn = document.getElementById('save-prompt-btn');
+    const deletePromptBtn = document.getElementById('delete-prompt-btn');
 
     // --- RENDER FUNCTIONS ---
     const createThreadElement = (thread) => {
@@ -58,7 +62,7 @@ export function initChatPage(API_BASE_URL) {
 
         return threadEl;
     };
-    
+
     const createFolderElement = (folder) => {
         const folderEl = document.createElement('details');
         folderEl.className = 'folder-dropzone rounded-lg';
@@ -122,7 +126,7 @@ export function initChatPage(API_BASE_URL) {
         if (uncategorizedThreads.length > 0) {
             uncategorizedThreads.forEach(thread => uncategorizedList.appendChild(createThreadElement(thread)));
         } else {
-             uncategorizedList.innerHTML = `<p class="text-gray-500 text-center text-sm py-4">No uncategorized chats.</p>`;
+            uncategorizedList.innerHTML = `<p class="text-gray-500 text-center text-sm py-4">No uncategorized chats.</p>`;
         }
         uncategorizedSection.appendChild(uncategorizedList);
         uncategorizedSection.addEventListener('dragover', e => { e.preventDefault(); header.classList.add('bg-blue-100', 'dark:bg-blue-900/50'); });
@@ -146,11 +150,11 @@ export function initChatPage(API_BASE_URL) {
 
         const bubbleContainer = document.createElement('div');
         bubbleContainer.className = `flex items-start max-w-xl ${isUser ? 'flex-row-reverse' : 'space-x-2'}`;
-        
+
         const contentEl = document.createElement('div');
         // --- UPDATED: Added a class for styling markdown content ---
         contentEl.className = `p-3 rounded-lg chat-bubble-content ${isUser ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100'}`;
-        
+
         // --- UPDATED: Use innerHTML with marked for AI, innerText for user ---
         if (isUser) {
             contentEl.innerText = msg.content;
@@ -158,7 +162,7 @@ export function initChatPage(API_BASE_URL) {
             // This converts markdown to HTML
             contentEl.innerHTML = marked.parse(msg.content);
         }
-        
+
         bubbleContainer.appendChild(contentEl);
         msgEl.appendChild(bubbleContainer);
 
@@ -186,7 +190,7 @@ export function initChatPage(API_BASE_URL) {
         timeEl.className = 'text-xs text-gray-400';
         timeEl.textContent = formatTimestamp(msg.timestamp);
         footerEl.appendChild(timeEl);
-        
+
         msgEl.appendChild(footerEl);
         messagesContainerEl.appendChild(msgEl);
         messagesContainerEl.scrollTop = messagesContainerEl.scrollHeight;
@@ -200,7 +204,7 @@ export function initChatPage(API_BASE_URL) {
         }
         messages.forEach(msg => appendMessage(msg));
     };
-    
+
     const toggleSidebar = (isVisible) => {
         state.isSidebarVisible = isVisible;
         if (isVisible) {
@@ -243,13 +247,21 @@ export function initChatPage(API_BASE_URL) {
         const userMessage = { content: messageText, role: 'user', timestamp: Math.floor(Date.now() / 1000) };
         appendMessage(userMessage);
         chatInputEl.value = '';
-        const activeFilters = Array.from(chatFiltersEl.querySelectorAll('input:checked')).map(input => input.value);
+
+        // --- UPDATED: Use system prompt from textarea ---
+        const systemPrompt = systemPromptTextarea.value.trim();
+
         const payloadThreadId = state.activeThreadId === NEW_THREAD_ID ? null : state.activeThreadId;
         try {
             const response = await fetch(`${API_BASE_URL}/chat/message`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ thread_id: payloadThreadId, user_message: messageText, filters: activeFilters })
+                // --- UPDATED: Send system_prompt instead of filters ---
+                body: JSON.stringify({
+                    thread_id: payloadThreadId,
+                    user_message: messageText,
+                    system_prompt: systemPrompt
+                })
             });
             if (!response.ok) throw new Error('API response was not ok.');
             const data = await response.json();
@@ -305,16 +317,41 @@ export function initChatPage(API_BASE_URL) {
             const data = await res.json();
             state.folders = data.folders;
             state.threads = data.threads.sort((a, b) => b.timestamp - a.timestamp);
+
+            // CHANGED: Always default to NEW_THREAD_ID (New Chat) on initial load,
+            // unless a specific thread is requested (e.g., after saving a new one).
             if (threadToSelect) {
                 setActiveThread(threadToSelect);
-            } else if (state.threads.length > 0) {
-                setActiveThread(state.threads[0].id);
             } else {
                 setActiveThread(NEW_THREAD_ID);
             }
         } catch (error) {
             console.error(error);
             chatSidebarContent.innerHTML = `<p class="text-red-500 text-center">${error.message}</p>`;
+        }
+    };
+
+    // --- PROMPT MANAGEMENT FUNCTIONS ---
+    const loadSavedPrompts = async () => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/chat/prompts`);
+            if (!res.ok) throw new Error('Failed to load prompts.');
+            const prompts = await res.json();
+
+            // Clear existing options (except first)
+            while (savedPromptsSelect.options.length > 1) {
+                savedPromptsSelect.remove(1);
+            }
+
+            prompts.forEach(p => {
+                const option = document.createElement('option');
+                option.value = p.id;
+                option.textContent = p.title;
+                option.dataset.content = p.content;
+                savedPromptsSelect.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error loading prompts:', error);
         }
     };
 
@@ -325,15 +362,73 @@ export function initChatPage(API_BASE_URL) {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); }
     });
     toggleSidebarBtn.addEventListener('click', () => toggleSidebar(!state.isSidebarVisible));
-    filterToggleBtn.addEventListener('click', (e) => {
+
+    // System Prompt Listeners
+    systemPromptToggleBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        filterPopover.classList.toggle('hidden');
+        systemPromptPopover.classList.toggle('hidden');
     });
+
+    savedPromptsSelect.addEventListener('change', () => {
+        const selectedOption = savedPromptsSelect.options[savedPromptsSelect.selectedIndex];
+        if (selectedOption.value) {
+            systemPromptTextarea.value = selectedOption.dataset.content;
+            deletePromptBtn.classList.remove('hidden');
+        } else {
+            // Resetting to default doesn't necessarily clear the text, but let's clear it for clarity
+            // Or should we keep it as a "template" mechanism? User requirement: "Allow the user to add a temporarily system prompt... When the page is refreshed, it resets"
+            // If they switch back to "Default", maybe we clear? Users might expect that.
+            systemPromptTextarea.value = '';
+            deletePromptBtn.classList.add('hidden');
+        }
+    });
+
+    savePromptBtn.addEventListener('click', async () => {
+        const content = systemPromptTextarea.value.trim();
+        if (!content) {
+            alert('Please enter some prompt text to save.');
+            return;
+        }
+        const title = prompt('Enter a title for this prompt:');
+        if (title && title.trim()) {
+            try {
+                const res = await fetch(`${API_BASE_URL}/chat/prompts`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: title.trim(), content: content })
+                });
+                if (!res.ok) throw new Error('Failed to save prompt');
+                await loadSavedPrompts();
+                alert('Prompt saved!');
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+    });
+
+    deletePromptBtn.addEventListener('click', async () => {
+        const selectedId = savedPromptsSelect.value;
+        if (!selectedId) return;
+
+        if (confirm('Are you sure you want to delete this prompt?')) {
+            try {
+                const res = await fetch(`${API_BASE_URL}/chat/prompts/${selectedId}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error('Failed to delete prompt');
+                systemPromptTextarea.value = ''; // Clear text
+                deletePromptBtn.classList.add('hidden'); // Hide delete btn
+                await loadSavedPrompts(); // Reload list
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+    });
+
+
     addChatFolderBtn.addEventListener('click', async () => {
         const name = prompt('Enter new folder name:');
         if (name && name.trim()) {
             await fetch(`${API_BASE_URL}/chat/folders`, {
-                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ name: name.trim() })
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name.trim() })
             });
             await loadInitialData(state.activeThreadId);
         }
@@ -360,7 +455,7 @@ export function initChatPage(API_BASE_URL) {
             const newName = prompt('Enter new folder name:', folder.name);
             if (newName && newName.trim() !== folder.name) {
                 await fetch(`${API_BASE_URL}/chat/folders/${folderId}`, {
-                    method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ name: newName.trim() })
+                    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName.trim() })
                 });
                 await loadInitialData(state.activeThreadId);
             }
@@ -392,7 +487,7 @@ export function initChatPage(API_BASE_URL) {
             setActiveThread(parseInt(threadEl.dataset.threadId, 10));
         }
     });
-    
+
     messagesContainerEl.addEventListener('click', async (e) => {
         const copyBtn = e.target.closest('.chat-copy-btn');
         if (copyBtn) {
@@ -413,10 +508,17 @@ export function initChatPage(API_BASE_URL) {
             openMenuEl.classList.add('hidden');
             openMenuEl = null;
         }
-        if (!e.target.closest('#chat-filter-toggle-btn') && !filterPopover.classList.contains('hidden')) {
-             filterPopover.classList.add('hidden');
+        // --- UPDATED: Close system prompt popover ---
+        if (!e.target.closest('#system-prompt-toggle-btn') &&
+            !e.target.closest('#system-prompt-popover') && // Allow clicking inside
+            !systemPromptPopover.classList.contains('hidden')) {
+            systemPromptPopover.classList.add('hidden');
         }
     });
 
+    // Apply default sidebar state
+    toggleSidebar(state.isSidebarVisible);
+
     loadInitialData();
+    loadSavedPrompts(); // Load prompts on init
 }

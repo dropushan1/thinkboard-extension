@@ -1,6 +1,7 @@
 <!-- thinkboard-frontend/popup.html -->
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,7 +14,8 @@
     <!-- UPDATED: A completely new, more robust styling method for lists -->
     <style>
         /* 1. Reset the list's default styles */
-        .chat-bubble-content ul, .chat-bubble-content ol {
+        .chat-bubble-content ul,
+        .chat-bubble-content ol {
             list-style: none;
             padding-left: 0;
             margin-top: 0.5rem;
@@ -23,55 +25,63 @@
         /* 2. Create a "hanging indent" for each list item */
         .chat-bubble-content li {
             /* This makes the <li> a positioning container for the bullet */
-            position: relative; 
+            position: relative;
             /* This pushes the text to the right, creating space for the bullet.
                All lines of text, including wrapped lines, will start here. */
-            padding-left: 1.2em; 
+            padding-left: 1.2em;
             margin-bottom: 0.25rem;
         }
 
         /* 3. Position our custom bullet within the padded space */
         .chat-bubble-content li::before {
             /* Position the bullet relative to the <li> */
-            position: absolute; 
+            position: absolute;
             /* Place it at the very beginning of the <li>, inside the padding area */
             left: 0;
-            top: 0; /* Aligns bullet with the top of the text */
+            top: 0;
+            /* Aligns bullet with the top of the text */
         }
-        
+
         /* 4. Define the content for the custom bullet */
-        .chat-bubble-content ul > li::before {
-            content: '•'; /* The bullet character */
+        .chat-bubble-content ul>li::before {
+            content: '•';
+            /* The bullet character */
             /* This adds a tiny bit of space after the bullet. Adjust if needed. */
-            padding-right: 0.4em; 
+            padding-right: 0.4em;
         }
 
         /* 5. Handle ordered (numbered) lists correctly */
         .chat-bubble-content ol {
             counter-reset: list-counter;
         }
-        .chat-bubble-content ol > li {
+
+        .chat-bubble-content ol>li {
             counter-increment: list-counter;
         }
-        .chat-bubble-content ol > li::before {
-            content: counter(list-counter) "."; /* e.g., "1.", "2." */
+
+        .chat-bubble-content ol>li::before {
+            content: counter(list-counter) ".";
+            /* e.g., "1.", "2." */
             /* Add space after the number+period */
-            padding-right: 0.4em; 
+            padding-right: 0.4em;
         }
 
         /* --- Other styles remain the same --- */
         .chat-bubble-content p {
             margin-bottom: 0.5rem;
         }
+
         .chat-bubble-content p:last-child {
             margin-bottom: 0;
         }
+
         .chat-bubble-content code {
             background-color: rgba(199, 203, 209, 0.4);
             border-radius: 4px;
             padding: 2px 5px;
             font-family: monospace;
         }
+
         .chat-bubble-content pre {
             background-color: #f3f4f6;
             padding: 0.75rem;
@@ -79,23 +89,31 @@
             overflow-x: auto;
             margin-bottom: 0.5rem;
         }
+
         .dark .chat-bubble-content code {
-             background-color: rgba(75, 85, 99, 0.7);
+            background-color: rgba(75, 85, 99, 0.7);
         }
+
         .dark .chat-bubble-content pre {
             background-color: #1f2937;
         }
     </style>
 </head>
+
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-900">
     <div id="app" class="flex flex-col h-screen">
         <header class="bg-white dark:bg-gray-800 shadow-md flex-shrink-0">
             <nav class="flex justify-around p-1">
-                <a href="#home" class="nav-link text-3xl p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700" title="Home">🏠</a>
-                <a href="#chat" class="nav-link text-3xl p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700" title="Chat">💬</a>
-                <a href="#words" class="nav-link text-3xl p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700" title="Words">🔤</a>
-                <a href="#grammar" class="nav-link text-3xl p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700" title="Grammar">✍️</a>
-                <a href="#settings" class="nav-link text-3xl p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700" title="Settings">⚙️</a>
+                <a href="#home" class="nav-link text-3xl p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700"
+                    title="Home">🏠</a>
+                <a href="#chat" class="nav-link text-3xl p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700"
+                    title="Chat">💬</a>
+                <a href="#words" class="nav-link text-3xl p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700"
+                    title="Words">🔤</a>
+                <a href="#grammar" class="nav-link text-3xl p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700"
+                    title="Grammar">✍️</a>
+                <a href="#settings" class="nav-link text-3xl p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700"
+                    title="Settings">⚙️</a>
             </nav>
         </header>
         <main id="content" class="flex-grow p-4 overflow-y-auto">
@@ -104,4 +122,5 @@
     </div>
     <script type="module" src="main.js"></script>
 </body>
+
 </html>

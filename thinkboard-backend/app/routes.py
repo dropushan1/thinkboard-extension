@@ -1,6 +1,6 @@
 # app/routes.py
 from flask import Blueprint, request, jsonify
-from .models import Note, Folder, ChatThread, ChatMessage, ChatFolder, StudyWord
+from .models import Note, Folder, ChatThread, ChatMessage, ChatFolder, StudyWord, CustomPrompt
 from . import db
 import time
 import json 
@@ -217,7 +217,10 @@ def send_chat_message():
     data = request.get_json()
     user_message = data.get('user_message')
     thread_id = data.get('thread_id')
-    filters = data.get('filters', [])
+    # CHANGED: 'filters' are now replaced by 'system_prompt' logic but keeping it safe.
+    # The new logic prefers 'system_prompt' explicitly sent by frontend.
+    system_prompt = data.get('system_prompt') 
+    
     if not user_message:
         return jsonify({'error': 'Message content is required'}), 400
     if thread_id:
@@ -232,20 +235,20 @@ def send_chat_message():
     user_msg_obj = ChatMessage(content=user_message, role='user', thread_id=thread.id)
     db.session.add(user_msg_obj)
     thread.timestamp = int(time.time())
-    system_instruction = "\n\n--- INSTRUCTION SET ---\n"
-    if "Short Reply" in filters:
-        system_instruction += "Keep your response concise and strictly to the point.\n"
-    if "Learning" in filters:
-        system_instruction += "Explain the topic using simple terms, analogies, and a beginner-friendly structure.\n"
-    if "Detailed Reply" in filters:
-        system_instruction += "Provide a comprehensive and highly detailed response.\n"
-    system_instruction += "-----------------------\n"
+
+    # --- UPDATED PROMPT CONSTRUCTION ---
+    if system_prompt and system_prompt.strip():
+        final_system_instruction = f"\n\n--- SYSTEM INSTRUCTION ---\n{system_prompt}\n--------------------------\n"
+    else:
+        # Fallback to old behavior if no prompt meant to be "empty"
+        final_system_instruction = ""
+
     history = ChatMessage.query.filter_by(thread_id=thread.id).order_by(ChatMessage.timestamp.asc()).all()
     conversation_context = ""
     for msg in history:
         conversation_context += f"<{msg.role.upper()}>: {msg.content}\n"
     final_prompt = (
-        system_instruction + 
+        final_system_instruction + 
         "\n--- CONVERSATION HISTORY ---\n" + 
         conversation_context +
         f"<USER>: {user_message}"
@@ -287,7 +290,8 @@ def correct_grammar():
 
             1.  `corrected_text`: The fully corrected version of the user's text.
             2.  `advice`: A brief, friendly summary of the main types of errors found (e.g., "I noticed a few run-on sentences and some spelling errors.").
-            3.  `mistakes`: An array of objects, where each object has two keys: "original" (the incorrect word/phrase) and "corrected" (the fixed word/phrase). List only the specific words or short phrases that were changed.
+            3.  `mistakes`: An array of objects, where each object has two keys: "original" (the incorrect word/phrase) and "corrected" (the fixed word/phrase). 
+                **IMPORTANT: 'original' MUST be a single word or a very short phrase (max 2-3 words). NEVER return a full sentence here.**
 
             Example JSON structure:
             {{
@@ -403,3 +407,32 @@ def generate_meanings():
     except Exception as e:
         print(f"Gemini Batch Error: {e}")
         return jsonify({'error': str(e)}), 500
+
+# --- NEW: CUSTOM PROMPTS ROUTES ---
+@api_bp.route('/chat/prompts', methods=['GET'])
+def get_custom_prompts():
+    prompts = CustomPrompt.query.order_by(CustomPrompt.timestamp.desc()).all()
+    return jsonify([p.to_dict() for p in prompts])
+
+@api_bp.route('/chat/prompts', methods=['POST'])
+def create_custom_prompt():
+    data = request.get_json()
+    title = data.get('title')
+    content = data.get('content')
+    
+    if not title or not title.strip():
+        return jsonify({'error': 'Title is required'}), 400
+    if not content or not content.strip():
+        return jsonify({'error': 'Content is required'}), 400
+        
+    new_prompt = CustomPrompt(title=title.strip(), content=content.strip())
+    db.session.add(new_prompt)
+    db.session.commit()
+    return jsonify(new_prompt.to_dict()), 201
+
+@api_bp.route('/chat/prompts/<int:prompt_id>', methods=['DELETE'])
+def delete_custom_prompt(prompt_id):
+    prompt = CustomPrompt.query.get_or_404(prompt_id)
+    db.session.delete(prompt)
+    db.session.commit()
+    return '', 204

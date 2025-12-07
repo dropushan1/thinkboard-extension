@@ -55,7 +55,7 @@ export function initGrammarPage(API_BASE_URL) {
             // Handle advice and mistakes if they exist
             if (data.advice && data.mistakes && data.mistakes.length > 0) {
                 correctionAdviceEl.textContent = data.advice;
-                
+
                 data.mistakes.forEach(mistake => {
                     const label = document.createElement('label');
                     label.className = 'flex items-center space-x-3 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700/50 cursor-pointer';
@@ -73,8 +73,11 @@ export function initGrammarPage(API_BASE_URL) {
                 saveMistakesBtnEl.classList.remove('hidden');
                 adviceMistakesAreaEl.classList.remove('hidden');
             } else {
-                 saveMistakesBtnEl.classList.add('hidden');
+                saveMistakesBtnEl.classList.add('hidden');
             }
+
+            // Save state after successful correction
+            saveState();
 
         } catch (error) {
             console.error('Grammar correction failed:', error);
@@ -132,13 +135,93 @@ export function initGrammarPage(API_BASE_URL) {
     correctBtnEl.addEventListener('click', handleCorrectGrammar);
     copyBtnEl.addEventListener('click', handleCopyText);
     saveMistakesBtnEl.addEventListener('click', handleSaveWords);
-    
+
     // --- NEW IMPLEMENTATION: Correct on Enter keydown ---
     grammarInputEl.addEventListener('keydown', e => {
         // Only trigger on Enter, not Shift+Enter (which is for a new line)
-        if (e.key === 'Enter' && !e.shiftKey) { 
-            e.preventDefault(); 
-            handleCorrectGrammar(); 
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleCorrectGrammar();
         }
     });
+
+    // --- STATE PERSISTENCE & RESTART LOGIC ---
+
+    // 1. Save State to localStorage
+    const saveState = () => {
+        const state = {
+            inputText: grammarInputEl.value,
+            showAdvice: showAdviceToggleEl.checked,
+            resultsVisible: !resultsAreaEl.classList.contains('hidden'),
+            adviceVisible: !adviceMistakesAreaEl.classList.contains('hidden'),
+            originalText: originalTextOutputEl.textContent,
+            correctedText: correctedTextOutputEl.textContent,
+            adviceText: correctionAdviceEl.textContent,
+            mistakesHTML: mistakesListEl.innerHTML,
+            saveBtnVisible: !saveMistakesBtnEl.classList.contains('hidden')
+        };
+        localStorage.setItem('grammarState', JSON.stringify(state));
+    };
+
+    // 2. Load State from localStorage
+    const loadState = () => {
+        const savedState = localStorage.getItem('grammarState');
+        if (savedState) {
+            try {
+                const state = JSON.parse(savedState);
+                grammarInputEl.value = state.inputText || '';
+                showAdviceToggleEl.checked = state.showAdvice || false;
+
+                if (state.resultsVisible) {
+                    originalTextOutputEl.textContent = state.originalText || '';
+                    correctedTextOutputEl.textContent = state.correctedText || '';
+                    resultsAreaEl.classList.remove('hidden');
+                }
+
+                if (state.adviceVisible) {
+                    correctionAdviceEl.textContent = state.adviceText || '';
+                    mistakesListEl.innerHTML = state.mistakesHTML || '';
+                    adviceMistakesAreaEl.classList.remove('hidden');
+                    if (state.saveBtnVisible) {
+                        saveMistakesBtnEl.classList.remove('hidden');
+                    } else {
+                        saveMistakesBtnEl.classList.add('hidden');
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to load grammar state", e);
+            }
+        }
+    };
+
+    // 3. Restart Handler
+    const handleRestart = () => {
+        if (confirm("Are you sure you want to clear everything and start over?")) {
+            // Clear UI
+            grammarInputEl.value = '';
+            showAdviceToggleEl.checked = false;
+            resultsAreaEl.classList.add('hidden');
+            adviceMistakesAreaEl.classList.add('hidden');
+            originalTextOutputEl.textContent = '';
+            correctedTextOutputEl.textContent = '';
+            correctionAdviceEl.textContent = '';
+            mistakesListEl.innerHTML = '';
+            saveMistakesBtnEl.classList.add('hidden');
+
+            // Clear Storage
+            localStorage.removeItem('grammarState');
+        }
+    };
+
+    const restartBtnEl = document.getElementById('restart-grammar-btn');
+    if (restartBtnEl) {
+        restartBtnEl.addEventListener('click', handleRestart);
+    }
+
+    // Attach Save Listeners
+    grammarInputEl.addEventListener('input', saveState);
+    showAdviceToggleEl.addEventListener('change', saveState);
+
+    // Initial Load
+    loadState();
 }
