@@ -330,3 +330,76 @@ def correct_grammar():
     except Exception as e:
         print(f"Gemini API or JSON Parsing Error: {e}")
         return jsonify({'error': f'Failed to process the text. Error: {str(e)}'}), 500
+
+# --- NEW: BATCH MEANING GENERATION ---
+@api_bp.route('/words/generate-meanings', methods=['POST'])
+def generate_meanings():
+    data = request.get_json()
+    word_ids = data.get('word_ids') # Optional list of IDs
+    process_all_new = data.get('process_all_new', False)
+    category = data.get('category') # NEW: Optional category filter
+
+    words_to_process = []
+    
+    if process_all_new:
+        # Get all words that don't have a meaning yet
+        query = StudyWord.query.filter(
+            (StudyWord.meaning == None) | (StudyWord.meaning == '')
+        )
+        if category:
+            query = query.filter(StudyWord.category == category)
+            
+        words_to_process = query.all()
+    elif word_ids:
+        # Note: If category is provided here, we could also filter, but usually IDs are specific enough.
+        # But to be safe and strictly follow "generate for meaning tab", we can enforce it if needed.
+        # For now, let's assume if IDs are passed, the frontend knows what it's doing.
+        # But "process_all_new" is where the bulk issue lies.
+        words_to_process = StudyWord.query.filter(StudyWord.id.in_(word_ids)).all()
+    
+    if not words_to_process:
+        # Differentiate between "nothing new" and "nothing at all" if useful, but a 0 count is enough.
+        return jsonify({'message': 'No words to process', 'updated_count': 0}), 200
+
+    # Batch them for Gemini
+    words_list = [w.word_text for w in words_to_process]
+    words_str = ", ".join(words_list)
+    
+    prompt = f"""
+        Generate a short meaning and a short example sentence for the following words: {words_str}.
+        
+        Return ONLY a raw JSON list of objects. Do not include markdown formatting (like ```json ... ```).
+        Each object must have:
+        - "word": The word itself
+        - "meaning": A very short definition (max 10 words)
+        - "example": A very short example sentence (max 15 words)
+
+        Example Output:
+        [
+            {{"word": "apple", "meaning": "A red or green fruit", "example": "I ate an apple."}},
+            {{"word": "run", "meaning": "To move fast on foot", "example": "He runs every day."}}
+        ]
+    """
+
+    try:
+        response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
+        text_response = response.text.replace('```json', '').replace('```', '').strip()
+        data_list = json.loads(text_response)
+        
+        updated_count = 0
+        for item in data_list:
+            word_text = item.get('word')
+            # Find the word object (case-insensitive check could be better, but sticking to simple match)
+            # Since we pulled from DB, we can map back. optimizing this loop:
+            match = next((w for w in words_to_process if w.word_text.lower() == word_text.lower()), None)
+            if match:
+                match.meaning = item.get('meaning')
+                match.example = item.get('example')
+                updated_count += 1
+        
+        db.session.commit()
+        return jsonify({'message': 'Meanings generated', 'updated_count': updated_count}), 200
+
+    except Exception as e:
+        print(f"Gemini Batch Error: {e}")
+        return jsonify({'error': str(e)}), 500

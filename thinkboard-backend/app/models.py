@@ -83,6 +83,8 @@ class StudyWord(db.Model):
     category = db.Column(db.String(50), nullable=False) # "Pronunciation", "Spelling", "Meaning"
     status = db.Column(db.String(50), nullable=False, default='Active') # "Active", "Medium", "Learned"
     notes = db.Column(db.Text, nullable=True)
+    meaning = db.Column(db.String(200), nullable=True)
+    example = db.Column(db.String(200), nullable=True)
     timestamp = db.Column(db.Integer, nullable=False, default=lambda: int(time.time()))
 
     def to_dict(self):
@@ -92,5 +94,7 @@ class StudyWord(db.Model):
             'category': self.category,
             'status': self.status,
             'notes': self.notes,
+            'meaning': self.meaning,
+            'example': self.example,
             'timestamp': self.timestamp
         }
