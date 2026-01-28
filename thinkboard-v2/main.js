@@ -9,7 +9,7 @@ import { initGrammarPage } from './js/grammar.js';
 document.addEventListener('DOMContentLoaded', () => {
     const content = document.getElementById('content');
     const navLinks = document.querySelectorAll('.nav-link');
-    const API_BASE_URL = 'https://track.vidoro.xyz/api';
+    const API_BASE_URL = 'https://ushapangeni.com.np/api';
 
     // --- PERSISTENCE: Create a container for the Chat page that is never destroyed ---
     // We append it to #content once, and toggle its visibility.
